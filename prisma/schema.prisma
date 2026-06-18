@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String            @unique
+  name            String?
+  avatar_url      String?
+  created_at      DateTime          @default(now())
+  studentProfile  StudentProfile?
+  curricula       Curriculum[]
+  skillAssessments SkillAssessment[]
+  progressEntries ProgressEntry[]
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum PreferredLanguage {
+  ENGLISH
+  HINDI
+  HINGLISH
+}
+
+model StudentProfile {
+  id                       String            @id @default(uuid()) @db.Uuid
+  userId                   String            @unique @db.Uuid
+  user                     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentSkills            String[]
+  targetRole               String
+  experienceLevel          ExperienceLevel
+  availableHoursPerWeek    Int
+  preferredLanguage        PreferredLanguage
+  onboardingCompleted      Boolean           @default(false)
+  weeklyProgressEmails     Boolean           @default(true)
+  dailyStudyReminders      Boolean           @default(false)
+  created_at               DateTime          @default(now())
+  updated_at               DateTime          @updatedAt
+
+  @@index([userId])
+}
+
+enum CurriculumStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+model Curriculum {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @db.Uuid
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  targetRole  String
+  totalWeeks  Int
+  currentWeek Int              @default(1)
+  status      CurriculumStatus
+  isDeleted   Boolean          @default(false)
+  generatedAt DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  weeks       Week[]
+  progressEntries ProgressEntry[]
+
+  @@index([userId])
+}
+
+model Week {
+  id           String     @id @default(uuid()) @db.Uuid
+  curriculumId String     @db.Uuid
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  weekNumber   Int
+  theme        String
+  objectives   String[]
+  isCompleted  Boolean    @default(false)
+  completedAt  DateTime?
+  resources    Resource[]
+  tasks        Task[]
+  progressEntries ProgressEntry[]
+
+  @@index([curriculumId])
+}
+
+enum ResourceType {
+  VIDEO
+  ARTICLE
+  COURSE
+  PROJECT
+  TOOL
+}
+
+model Resource {
+  id              String       @id @default(uuid()) @db.Uuid
+  weekId          String       @db.Uuid
+  week            Week         @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  title           String
+  type            ResourceType
+  url             String
+  platform        String
+  durationMinutes Int?
+  isFree          Boolean
+  description     String?
+
+  @@index([weekId])
+}
+
+enum TaskType {
+  PRACTICE
+  PROJECT
+  QUIZ
+  READING
+}
+
+model Task {
+  id          String    @id @default(uuid()) @db.Uuid
+  weekId      String    @db.Uuid
+  week        Week      @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  taskType    TaskType
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+
+  @@index([weekId])
+}
+
+model SkillAssessment {
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String          @db.Uuid
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill      String
+  level      ExperienceLevel
+  assessedAt DateTime        @default(now())
+
+  @@index([userId])
+}
+
+model ProgressEntry {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @db.Uuid
+  curriculumId String     @db.Uuid
+  weekId       String     @db.Uuid
+  completedAt  DateTime   @default(now())
+  notes        String?
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  week         Week       @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([curriculumId])
+}
